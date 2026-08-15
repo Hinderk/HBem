@@ -1,0 +1,22 @@
+
+SET( SRCFILES "domaindata.cpp" "openfile.cpp" )
+
+# Create the target for the build system ...
+
+ADD_EXECUTABLE( ${SOLVER} "hbem.cpp" )
+
+ADD_LIBRARY( "${LIBNAME}" OBJECT ${SRCFILES} )
+
+TARGET_LINK_LIBRARIES( ${SOLVER} ${LIBNAME} )
+TARGET_LINK_LIBRARIES( ${SOLVER} CmdLine::CmdLine )
+
+ADD_LIBRARY( ${LIBNAME}::${LIBNAME} ALIAS ${LIBNAME} )
+
+
+TARGET_INCLUDE_DIRECTORIES(
+  ${LIBNAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>/include
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+)

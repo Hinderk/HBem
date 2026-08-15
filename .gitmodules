@@ -1,0 +1,3 @@
+[submodule "libs/cmdline"]
+	path = libs/cmdline
+	url = https://github.com/Hinderk/cmdline.git
