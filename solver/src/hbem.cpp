@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "domaindata.h"
+#include "meshdata.h"
 #include "cmdline/optionparser.h"
 
 
@@ -15,6 +16,7 @@ int main( int argc, const char *argv[] )
   int OUTPUT = Opts -> AddOption( "hbem.dat", "-o", "--output", "file" ) ;
   int INPUT = Opts -> AddOption( "", "-i", "--input", "file" ) ;
   int LOGFILE = Opts -> AddOption( "", "-l", "--log", "file" ) ;
+  int PLUGIN = Opts -> AddOption( "", "-m", "--module", "path" ) ;
   int SEARCH = Opts -> AddOption( "", "-s", "--search", "path" ) ;
   int USAGE = Opts -> AddOption( false, "-?", "--help" ) ;
   Opts -> UseDefault( LOGLVL, true ) ;
@@ -30,8 +32,9 @@ int main( int argc, const char *argv[] )
     return 0 ;
   }
   Opts -> QueryOption( Opt, LOGLVL ) ;
-  DomainData BEMData( (int) Opt ) ;
   FILE *Out = NULL ;
+  DomainData BEMData ;
+  BEMData.ChangeLogLevel( Opt ) ;
   if ( Opts -> QueryOption( Opt, LOGFILE ) )
   {
     Out = fopen( Opt, "a+" ) ;
@@ -39,7 +42,16 @@ int main( int argc, const char *argv[] )
   }
   FILE *Log = Out ? Out : stdout ;
   BEMData.Start() ;
-  int counter = Opts -> QueryOption( Opt, SEARCH ) ;
+  int counter = Opts -> QueryOption( Opt, PLUGIN ) ;
+  std::string ModulePath ;
+  while ( counter > 0 )
+  {
+    ModulePath += ":" ;
+    ModulePath += (const char *) Opt ;
+    counter = Opts -> NextOption( Opt ) ;
+  }
+  BEMData.Load( ModulePath.c_str() ) ;
+  counter = Opts -> QueryOption( Opt, SEARCH ) ;
   while ( counter > 0 )
   {
     int error = BEMData.Search( Opt ) ;
@@ -56,6 +68,9 @@ int main( int argc, const char *argv[] )
     BEMData.Read( Opt ) ;
     counter = Opts -> NextOption( Opt ) ;
   }
+  MeshData M0 ;
+  M0.CreateMesh( BEMData, 0.01 ) ;
+
   BEMData.Stop() ;
 
   // Compute Results ...

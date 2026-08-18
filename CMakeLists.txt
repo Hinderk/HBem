@@ -20,6 +20,7 @@ ADD_SUBDIRECTORY( "libs" )
 
 ADD_SUBDIRECTORY( "solver" )
 
-# The folder below contains shared objects implementing functions:
+# The folder below contains shared objects that implement a mechanism
+# to enforce arbitrary boundary conditions:
 
-#ADD_SUBDIRECTORY( "plugins" )
+ADD_SUBDIRECTORY( "plugins" )

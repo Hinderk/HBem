@@ -2,17 +2,32 @@
 #ifndef __HBEM_POINTDATA_H
 #define __HBEM_POINTDATA_H
 
-#include <cstdint>
-
+#include <float.h>
 
 
 struct PointData {
 
-  uint64_t index ;
-  int64_t  match ;
 
-  int32_t  segment ;
+  bool operator<( const PointData &p )
+  {
+    if ( domain == p.domain )
+    {
+      if ( x + FLT_EPSILON < p.x )  return true ;
+      if ( x - FLT_EPSILON > p.x )  return false ;
+      return( y + FLT_EPSILON < p.y ) ;
+    }
+    return( domain < p.domain ) ;
+  }
 
+
+  int      index ;
+  int      match ;
+
+  int      domain ;
+  int      boundary ;
+  int      material ;
+
+  double   panelsize ;
   double   x ;
   double   y ;
   double   normal_x ;

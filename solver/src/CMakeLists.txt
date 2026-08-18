@@ -1,5 +1,6 @@
 
-SET( SRCFILES "domaindata.cpp" "openfile.cpp" )
+SET( SRCFILES "domaindata.cpp" "openfile.cpp" "meshdata.cpp"
+              "bemplugin.cpp" "dlfcn.cpp" )
 
 # Create the target for the build system ...
 
@@ -9,6 +10,7 @@ ADD_LIBRARY( "${LIBNAME}" OBJECT ${SRCFILES} )
 
 TARGET_LINK_LIBRARIES( ${SOLVER} ${LIBNAME} )
 TARGET_LINK_LIBRARIES( ${SOLVER} CmdLine::CmdLine )
+
 
 ADD_LIBRARY( ${LIBNAME}::${LIBNAME} ALIAS ${LIBNAME} )
 

@@ -10,25 +10,164 @@
 
 #ifdef _WIN32
   #include "windows/getline.h"
+  #include "windows/dirent.h"
 #endif
 
 
 
-DomainData::DomainData( int Level ) :
+
+static int Register( void *Handle, const char *Name, const Plugin_t *Data )
+{
+  return ( (DomainData*) Handle ) -> Update( Name, Data ) ;
+}
+
+
+
+DomainData::DomainData( void ) :
 
   Log( NULL ) ,
-  LogLevel( Level ) ,
-  SearchPath() ,
+  LogLevel( HBEM_DEFAULT_VERBOSITY ) ,
+  ModulePath () ,
   Name() ,
   Points() ,
   Segments() ,
-  Patches() {}
-
-
-
-void DomainData::Clear( void )
+  Patches() ,
+  Module() ,
+  Registry()
 {
-  SearchPath.clear() ;
+  Service.Version = { 0, 0 } ;
+  Service.Register = Register ;
+  Service.Request = NULL ;
+  Service.Registrar = this ;
+  MaxVersion = { 65535, 65535 } ;
+}
+
+
+
+int DomainData::Load( const char *Dir )
+{
+  FILE *Out = Log ? Log : stdout ;
+  char WorkingArray[ HBEM_MAX_FILE_PATH_LENGTH + 1 ] = { 0 } ;
+  char NameArray[ 2 * HBEM_MAX_FILE_PATH_LENGTH + 1 ] = { 0 } ;
+  int OldCount = Registry.size() ;
+  if ( Dir )
+    strncpy( WorkingArray, Dir, HBEM_MAX_FILE_PATH_LENGTH ) ;
+  else
+  {
+    const char *Paths = getenv( HBEM_PLUGIN_DIRECTORY ) ;
+    if ( Paths == NULL )  return HBEM_PLUGIN_DIRECTORY_NOT_FOUND ;
+    strncpy( WorkingArray, Paths, HBEM_MAX_FILE_PATH_LENGTH ) ;
+  }
+  struct stat fs ;
+  if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+    fprintf( Out, "\n#I -- Scanning file system for plugins ..." ) ;
+  char *Directory = strtok( WorkingArray, ":" ) ;
+  while ( Directory != NULL )
+  {
+    DIR *DirHandle = opendir( Directory ) ;
+    if ( DirHandle != NULL )
+    {
+      if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+        fprintf( Out, "\n#I -- -- Scanning directory:  %s", Directory ) ;
+      strncpy( NameArray, Directory, HBEM_MAX_FILE_PATH_LENGTH ) ;
+      int Cursor = strlen( Directory ) ;
+      NameArray[ Cursor ++ ] = '/' ;
+      struct dirent *DirEntry = readdir( DirHandle ) ;
+      for ( ; DirEntry ; DirEntry = readdir( DirHandle ) )
+      {
+        const char *Name = DirEntry -> d_name ;
+        strncpy( NameArray + Cursor, Name, HBEM_MAX_FILE_PATH_LENGTH ) ;
+        if ( stat( NameArray, &fs ) < 0 )  continue ;
+        if ( S_ISREG( fs.st_mode ) )
+        {
+          if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+            fprintf( Out, "\n#I -- -- -- Loading module:  %s", Name ) ;
+          int state = Load( NameArray, &Service ) ;
+          if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+          {
+            fprintf( Out, "\n#I -- -- -- Loading completed ..." ) ;
+            fprintf( Out, "  %s", state ? "ERROR" : "OK" ) ;
+          }
+        }
+      }
+      if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+        fprintf( Out, "\n#I -- -- Leaving directory." ) ;
+      closedir( DirHandle ) ;
+    }
+    Directory = strtok( NULL, ":" ) ;
+  }
+  int Count = Registry.size() - OldCount ;
+  if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+  {
+    fprintf( Out, "\n#I -- Scan completed, new " ) ;
+    fprintf( Out, "entities:  %i", Count ) ;
+  }
+  return ( Count > 0 ) ? 0 : HBEM_NO_PLUGINS_LOADED ;
+}
+
+
+
+int DomainData::Load( const char *Name, const Service_t *Service )
+{
+  BEM_Plugin *Handle = new BEM_Plugin( Name ) ;
+  int state = Handle -> state() ;
+  if ( state == 0 )
+  {
+    state = Handle -> init( Service ) ;
+    if ( state == 0 )
+    {
+      std::shared_ptr<BEM_Plugin> NewPlugin( Handle ) ;
+      Module.push_back( NewPlugin ) ;
+      return 0 ;
+    }
+  }
+  delete Handle ;
+  return state ;
+}
+
+
+
+int DomainData::Create( BEM_Function *&f, const char *Type )
+{
+  const auto &E = Registry.find( Type ) ;
+  if ( E == Registry.end() )  return HBEM_TYPE_NOT_REGISTERED ;
+  Setup_t Data ;
+  Data.Type = Type ;
+  Data.State = 0 ;
+  Data.Service = &Service ;
+  f = (BEM_Function*) E -> second.Constructor( &Data ) ;
+  return Data.State ;
+}
+
+
+
+int DomainData::Discard( const BEM_Function *f )
+{
+  const char *Type = f -> QueryType() ;
+  const auto &E = Registry.find( Type ) ;
+  if ( E == Registry.end() )  return HBEM_TYPE_NOT_REGISTERED ;
+  Setup_t Data ;
+  Data.Type = Type ;
+  Data.State = 0 ;
+  Data.Service = &Service ;
+  E -> second.Destructor( f, &Data ) ;
+  return Data.State ;
+}
+
+
+
+DomainData::~DomainData( void ) { Unload() ; }
+
+
+
+int DomainData::Unload( void )
+{
+  int state = 0 ;
+  for ( auto M = Module.begin() ; M != Module.end() ; ++ M )
+    state |= (*M) -> exit() ;
+  Module.clear() ;
+  Registry.clear() ;
+  return state ;
 }
 
 
@@ -352,16 +491,16 @@ int DomainData::Search( const char *Path )
 {
   if ( Path )
   {
-    SearchPath += ':' ;
-    SearchPath += Path ;
+    ModulePath += ':' ;
+    ModulePath += Path ;
   }
   else
   {
     const char *env = getenv( HBEM_SHELL_ENV_SEARCHPATH ) ;
-    SearchPath.clear() ;
-    if ( Path )  SearchPath = env ;
+    ModulePath.clear() ;
+    if ( Path )  ModulePath = env ;
   }
-  if ( SearchPath.length() < HBEM_MAX_FILE_PATH_LENGTH )
+  if ( ModulePath.length() < HBEM_MAX_FILE_PATH_LENGTH )
     return 0 ;
   return HBEM_ILLEGAL_SEARCHPATH ;
 }
@@ -377,4 +516,76 @@ int DomainData::SetLog( FILE *LogFile )
   }
   Log = LogFile ;
   return 0 ;
+}
+
+
+
+int DomainData::LogInfo( const char *Message, int nesting ) const
+{
+  if ( LogLevel > HBEM_NO_PROGRESS_REPORTS )
+  {
+    FILE *Out = Log ? Log : stdout ;
+    fprintf( Out, "\n#I" ) ;
+    for ( int i = 0 ; i < nesting ; i++ )  fprintf( Out, " --" ) ;
+    fprintf( Out, " %s", Message ) ;
+    return 0 ;
+  }
+  return HBEM_LOGLEVEL_TOO_LOW ;
+}
+
+
+
+int DomainData::LogAlert( const char *Message, int nesting ) const
+{
+  if ( LogLevel > HBEM_NO_WARNING_MESSAGES )
+  {
+    FILE *Out = Log ? Log : stdout ;
+    fprintf( Out, "\n#I" ) ;
+    for ( int i = 0 ; i < nesting ; i++ )  fprintf( Out, " --" ) ;
+    fprintf( Out, " %s", Message ) ;
+    return 0 ;
+  }
+  return HBEM_LOGLEVEL_TOO_LOW ;
+}
+
+
+
+int DomainData::ChangeLogLevel( int NewLevel )
+{
+  int OldLevel = LogLevel ;
+  LogLevel = NewLevel ;
+  return OldLevel ;
+}
+
+
+
+int DomainData::Update( const char *Name, const Plugin_t *Data )
+{
+  int Level = -1 ;
+  if ( Data -> Version < MaxVersion )
+  {
+    const char *Message = "-- -- -- -- Updating entity:     " ;
+    if ( Registry.count( Name ) > 0 )
+    {
+      auto &Entity = Registry[ Name ] ;
+      if ( Entity.Version < Data -> Version )
+        Entity = *Data ;
+      Level = LogLevel ;
+    }
+    else
+    {
+      Message = "-- -- -- -- Registering entity:  " ;
+      Level = LogLevel ;
+      Registry[ Name ] = *Data ;
+    }
+    if ( Level > HBEM_NO_PROGRESS_REPORTS )
+    {
+      FILE *Out = Log ? Log : stdout ;
+      fprintf( Out, "\n#I %s%s", Message, Name ) ;
+      fprintf( Out, "  [%i", Data -> Version.Major ) ;
+      fprintf( Out, ".%i]", Data -> Version.Minor ) ;
+    }
+    return 0 ;
+  }
+  return HBEM_UNSUPPORTED_PLUGIN ;
 }

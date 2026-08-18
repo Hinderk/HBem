@@ -43,7 +43,7 @@
   ENDIF( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/TestSetup.cmake )
 #
   TARGET_LINK_LIBRARIES( ${TEST_BIN} CmdLine::CmdLine )
-  TARGET_LINK_LIBRARIES( ${TEST_BIN} BEM2D::BEM2D )
+  TARGET_LINK_LIBRARIES( ${TEST_BIN} BEMLIB::BEMLIB )
 #
 ###############################################################################
 #
