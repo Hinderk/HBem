@@ -9,14 +9,15 @@
 class DomainData ;
 
 
+
 class MeshData {
+
+  friend class DomainData ;
 
   public:
 
     MeshData( void ) ;
    ~MeshData( void ) {}
-
-    int CreateMesh( const DomainData &D, double h ) ;
 
   private:
 

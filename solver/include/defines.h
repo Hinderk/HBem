@@ -33,12 +33,16 @@
 #define HBEM_FAILED_TO_RESOLVE_SYMBOLS 1280
 #define HBEM_FAILED_TO_LOAD_PLUGIN 1290
 #define HBEM_TYPE_NOT_REGISTERED 1300
-
+#define HBEM_MESH_WIDTH_TOO_SMALL 1310
+#define HBEM_SIZE_LIMIT_EXCEEDED 1320
+#define HBEM_BOUNDARY_CONDITIONS_UNMET 1330
+#define HBEM_BOUNDARY_NOT_CLOSED 1340
+#define HBEM_DISCONNECTED_SEGMENTS 1350
 
 #define HBEM_MAX_FILE_PATH_LENGTH  1024   // Size of buffer employed to
                                           // manipulate full file names
 
-#define HBEM_DOMAIN_FILE_FORMAT  "1.0"
+#define HBEM_DOMAIN_FILE_FORMAT   "1.0"
 
 #define HBEM_NO_ERROR_MESSAGES        2   // These numbers are used to
 #define HBEM_NO_WARNING_MESSAGES      4   // control the verbosity of
@@ -46,7 +50,8 @@
 
 #define HBEM_DEFAULT_VERBOSITY        8   // Default verbosity level
 
-
+#define HBEM_SIZE_THRESHOLD ( 1 << 16 )   // Limit the total number of
+					  // degrees of freedom
 
 #define HBEM_SHELL_ENV_SEARCHPATH   "HBEM_FILE_SEARCH_PATH"
 #define HBEM_PLUGIN_DIRECTORY       "HBEM_PLUGIN_SEARCH_PATH"

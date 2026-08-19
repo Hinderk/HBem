@@ -18,9 +18,11 @@ int main( int argc, const char *argv[] )
   int LOGFILE = Opts -> AddOption( "", "-l", "--log", "file" ) ;
   int PLUGIN = Opts -> AddOption( "", "-m", "--module", "path" ) ;
   int SEARCH = Opts -> AddOption( "", "-s", "--search", "path" ) ;
+  int WIDTH = Opts -> AddOption( 0.01d, "-p", "--panelsize", "length" ) ;
   int USAGE = Opts -> AddOption( false, "-?", "--help" ) ;
   Opts -> UseDefault( LOGLVL, true ) ;
   Opts -> UseDefault( OUTPUT, true ) ;
+  Opts -> UseDefault( WIDTH, true ) ;
   int State = Opts -> Parse() ;
   OptionValue Opt ;
   if ( State || Opts -> QueryOption( Opt, USAGE ) )
@@ -65,11 +67,17 @@ int main( int argc, const char *argv[] )
   counter = Opts -> QueryOption( Opt, INPUT ) ;
   while ( counter > 0 )
   {
-    BEMData.Read( Opt ) ;
+    int error = BEMData.Read( Opt ) ;
+    if ( error > 0 )
+    {
+      fprintf( Log, "\n#E Failed to parse input file -- Aborting." ) ;
+      return error ;
+    }
     counter = Opts -> NextOption( Opt ) ;
   }
+  Opts -> QueryOption( Opt, WIDTH ) ;
   MeshData M0 ;
-  M0.CreateMesh( BEMData, 0.01 ) ;
+  BEMData.CreateMesh( M0, Opt ) ;
 
   BEMData.Stop() ;
 

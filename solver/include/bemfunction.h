@@ -6,8 +6,7 @@
 #include <stdlib.h>
 
 #include "pointdata.h"
-
-
+#include "plugin.h"
 
 
 
@@ -18,6 +17,7 @@ struct BEM_Function {
 
     virtual int Evaluate( PointData &MeshPoint ) = 0 ;
     virtual const char* QueryType( void ) const = 0 ;
+    virtual PluginVersion_t Revision( void ) const = 0 ;
 
 } ;
 
