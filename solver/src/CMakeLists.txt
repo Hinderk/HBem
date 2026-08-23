@@ -1,6 +1,7 @@
 
-SET( SRCFILES "domaindata.cpp" "openfile.cpp" "meshdata.cpp"
-              "bemplugin.cpp" "dlfcn.cpp" )
+SET( SRCFILES "domaindata.cpp" "openfile.cpp" "dlfcn.cpp"
+              "bemplugin.cpp" "vector.cpp" "areadata.cpp"
+              "meshdata.cpp" "matrix.cpp" )
 
 # Create the target for the build system ...
 
@@ -9,6 +10,7 @@ ADD_EXECUTABLE( ${SOLVER} "hbem.cpp" )
 ADD_LIBRARY( "${LIBNAME}" OBJECT ${SRCFILES} )
 
 TARGET_LINK_LIBRARIES( ${SOLVER} ${LIBNAME} )
+TARGET_LINK_LIBRARIES( ${SOLVER} ${UMFPACK_LIBRARY} )
 TARGET_LINK_LIBRARIES( ${SOLVER} CmdLine::CmdLine )
 
 

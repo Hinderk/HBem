@@ -36,7 +36,7 @@
 # test is registered under this designation with the CTest system...
 #
     IF( DEFINED SOURCES )
-      SET( TEST_BIN "hbem-001" )
+      SET( TEST_BIN "hbem-002" )
       ADD_EXECUTABLE( ${TEST_BIN} ${SOURCES} )
     ENDIF( DEFINED SOURCES )
 #

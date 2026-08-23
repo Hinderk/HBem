@@ -1,10 +1,6 @@
 
-#include <algorithm>
-#include <cstring>
 #include <fstream>
 #include <sstream>
-#include <iomanip>
-#include <iostream>
 #include <math.h>
 
 #include "defines.h"
@@ -415,7 +411,7 @@ int DomainData::Write( const char *File ) const
     fprintf( Out, ".type:\nhbem-domain-data\n.format:\n" ) ;
     fprintf( Out, "%s\n.name:", HBEM_DOMAIN_FILE_FORMAT ) ;
     fprintf( Out, "\n%s", Name.c_str() ) ;
-    fprintf( Out, "\n.created:\n%s\n.points", Time ) ;
+    fprintf( Out, "\n.created:\n%s\n.points:", Time ) ;
     for ( const auto &p : Points )
     {
       fprintf( Out, "\n%5i  %+16.12e", p.first, p.second.x ) ;
@@ -455,7 +451,7 @@ int DomainData::Write( const char *File ) const
         }
       }
     }
-    fprintf( Out, "\n.end" ) ;
+    fprintf( Out, "\n.end\n" ) ;
     fclose( Out ) ;
     return 0 ;
   }
@@ -609,7 +605,7 @@ int DomainData::Update( const char *Name, const Plugin_t *Data )
     {
       auto &Entity = Registry[ Name ] ;
       if ( Entity.Version < Data -> Version )
-      {	      
+      {
         Entity = *Data ;
         Level = LogLevel ;
       }
@@ -645,135 +641,124 @@ int DomainData::CreateMesh( MeshData &Mesh, double MeshWidth )
     VertexData.f0 = NULL ;
     VertexData.State = 0 ;
     int state ;
+    Mesh.SetName( Name ) ;
     for ( const auto &P : Patches )
     {
       msg << "Start processing patch:  " << P.first ;
       LogInfo( msg, 1 ) ;
-      Mesh.DomainStart[ P.first ] = VertexData.CurrentDOFIndex ;
-      Mesh.epsilon[ P.first ] = P.second.epsilon ;
+      Mesh.Start( P.first, VertexData.CurrentDOFIndex ) ;
       VertexData.CurrentDomain = P.first ;
+      VertexData.epsilon = P.second.epsilon ;
       for ( const auto &B : P.second.Boundaries )
       {
         msg << "Start tracing boundary:  " << B.first ;
         LogInfo( msg, 2 ) ;
         VertexData.StartNewBoundary = true ;
         VertexData.CurrentBoundary = B.first ;
-	if ( B.second.f.size() )
-	{
+        if ( B.second.f.size() )
+        {
           state = Discard( VertexData.f0 ) ;
-	  if ( state )  return state ;
-	  state = Create( VertexData.f0, B.second.f.c_str() ) ;
-	  if ( state )
-	  {
+          if ( state )  return state ;
+          state = Create( VertexData.f0, B.second.f.c_str() ) ;
+          if ( state )
+          {
             msg << "Requested entity unavailble:  " << B.second.f ;
             LogAlert( msg, 3 ) ;
             LogAlert( "Ignoring boundary conditions ...", 3 ) ;
             VertexData.f0 = NULL ;
-	  }
-	  else
-	  {
-	    PluginVersion_t rev = VertexData.f0 -> Revision() ;
-	    msg << "Boundary conditions, entity:  " << B.second.f ;
-	    msg << "  [" << rev.Major << "." << rev.Minor << "]" ;
+          }
+          else
+          {
+            PluginVersion_t rev = VertexData.f0 -> Revision() ;
+            msg << "Boundary conditions, entity:  " << B.second.f ;
+            msg << "  [" << rev.Major << "." << rev.Minor << "]" ;
             LogInfo( msg, 3 ) ;
-	  }
-	}
+          }
+        }
         for ( int s : B.second.Segments )
         {
-	  VertexData.CurrentSegment = abs(s) ;
+          VertexData.CurrentSegment = abs(s) ;
           VertexData.StartNewSegment = true ;
           const Line2D &Section = Segments[ abs(s) ] ;
-	  VertexData.CurrentMaterial = Section.Material ;
-	  msg << "Entering segment:  " << abs(s) ;
+          VertexData.CurrentMaterial = Section.Material ;
+          msg << "Entering segment:  " << abs(s) ;
           LogInfo( msg, 3 ) ;
-	  RobinBC bc0 = { 0.0, 0.0, 0.0 } ; 
-	  const auto BC0 = B.second.BC.find( Section.Material ) ; 
+          RobinBC bc0 = { 0.0, 0.0, 0.0 } ;
+          const auto BC0 = B.second.BC.find( Section.Material ) ;
           if ( BC0 != B.second.BC.end() )
-	  {
+          {
             bc0 = BC0 -> second ;
-	    msg << "Boundary conditions, material:  " << Section.Material ;
+            msg << "Boundary conditions, material:  " << Section.Material ;
             LogInfo( msg, 4 ) ;
-	    msg << "Coefficient 0:  " << bc0.c0 ;
+            msg << "Coefficient 0:  " << bc0.c0 ;
             LogInfo( msg, 4 ) ;
-	    msg << "Coefficient 1:  " << bc0.c1 ;
+            msg << "Coefficient 1:  " << bc0.c1 ;
             LogInfo( msg, 4 ) ;
-	    msg << "Coefficient R:  " << bc0.cr ;
+            msg << "Coefficient R:  " << bc0.cr ;
             LogInfo( msg, 4 ) ;
           }
-	  VertexData.BoundaryCondition = bc0 ;
-	  VertexData.MinimalWidth = DBL_MAX ;
-	  VertexData.MaximalWidth = -1 ;
-	  uint64_t DOFStart = VertexData.CurrentDOFIndex ;
-	  if ( s < 0 )
-	  {
+          VertexData.BoundaryCondition = bc0 ;
+          VertexData.MinimalWidth = DBL_MAX ;
+          VertexData.MaximalWidth = -1 ;
+          uint64_t DOFStart = VertexData.CurrentDOFIndex ;
+          if ( s < 0 )
+          {
             auto v = Section.Vertices.rbegin() ;
             auto vend = Section.Vertices.rend() ;
             for ( ; v != vend ; ++ v )
-	    {
+            {
               VertexData.CurrentVertex = *v ;
               int error = TraceBoundary( Mesh, VertexData ) ;
-	      if ( error )  return error ;
-	      VertexData.LastVertex = VertexData.CurrentVertex ;
+              if ( error )  return error ;
+              VertexData.LastVertex = VertexData.CurrentVertex ;
             }
-	  }
-	  else
+          }
+          else
           {
             auto v = Section.Vertices.begin() ;
             auto vend = Section.Vertices.end() ;
             for ( ; v != vend ; ++ v )
-	    {
+            {
               VertexData.CurrentVertex = *v ;
               int error = TraceBoundary( Mesh, VertexData ) ;
-	      if ( error )  return error ;
-	      VertexData.LastVertex = VertexData.CurrentVertex ;
+              if ( error )  return error ;
+              VertexData.LastVertex = VertexData.CurrentVertex ;
             }
           }
-	  uint64_t DOF = VertexData.CurrentDOFIndex - DOFStart ;
+          uint64_t DOF = VertexData.CurrentDOFIndex - DOFStart ;
           msg << "Minimal panel width:  " << VertexData.MinimalWidth ;
           LogInfo( msg, 4 ) ;
           msg << "Maximal panel width:  " << VertexData.MaximalWidth ;
           LogInfo( msg, 4 ) ;
           msg << "Panels processed:  " << DOF / 2 ;
           LogInfo( msg, 4 ) ;
-	  VertexData.LastSegment = abs(s) ;
+          VertexData.LastSegment = abs(s) ;
           LogInfo( "Leaving segment.", 3 ) ;
         }
         if ( VertexData.FirstVertex != VertexData.CurrentVertex )
-	{
+        {
           LogAlert( "Boundary not closed!", 3 ) ;
           LogAlert( "Matrix assembly failure likely ...", 3 ) ;
-	  VertexData.State = HBEM_BOUNDARY_NOT_CLOSED ;
-	}
+          VertexData.State = HBEM_BOUNDARY_NOT_CLOSED ;
+        }
         LogInfo( "Done tracing boundary.", 2 ) ;
       }
-      Mesh.DomainEnd[ P.first ] = VertexData.CurrentDOFIndex ;
+      Mesh.Stop( P.first, VertexData.CurrentDOFIndex ) ;
       LogInfo( "Done processing patch.", 1 ) ;
     }
-    LogInfo( "Identifying domain interfaces ...", 1 ) ;
-    sort( Mesh.Panel.begin(), Mesh.Panel.end() ) ;
-    bool BCok = true ;
-    PointData *p0 = NULL ;
-    for ( auto &p : Mesh.Panel )
+    if ( Patches.size() > 0 )
     {
-      PointData *pold = p0 ;
-      p0 = &p ;
-      if ( pold )
+      LogInfo( "Identifying domain interfaces ...", 1 ) ;
+      if ( Mesh.MatchPanel() )
       {
-        if ( *pold < p )  continue ;
-        p.interface = true ;
-	p.match = pold -> index ;
-        pold -> interface = true ;
-        pold -> match = p.index ;
+        LogInfo( "Boundary conditions ...   OK", 1 ) ;
+        return state ? state : VertexData.State ;
       }
-      BCok &= p.interface || p.valid_bc ;
+      LogInfo( "Boundary conditions ...   NOK", 1 ) ;
+      return HBEM_BOUNDARY_CONDITIONS_UNMET ;
     }
-    if ( BCok )
-    {
-      LogInfo( "Boundary conditions ...   OK", 1 ) ;
-      return state ? state : VertexData.State ;
-    }
-    LogInfo( "Boundary conditions ...   NOK", 1 ) ;
-    return HBEM_BOUNDARY_CONDITIONS_UNMET ;
+    LogAlert( "No BEM domain data available ...", 1 ) ;
+    return HBEM_NO_DOMAIN_DATA_READ ;
   }
   return HBEM_MESH_WIDTH_TOO_SMALL ;
 }
@@ -782,7 +767,7 @@ int DomainData::CreateMesh( MeshData &Mesh, double MeshWidth )
 int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
 {
   std::stringstream msg ;
-  PointData P0 ; 
+  PointData P0 ;
   bool bcvalid = fabs( VertexData.BoundaryCondition.c0 ) > 1e-4 ||
                  fabs( VertexData.BoundaryCondition.c1 ) > 1e-4 ;
   if ( VertexData.StartNewBoundary )
@@ -804,7 +789,7 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
   const Point2D p0 = Points[ VertexData.LastVertex ] ;
   const Point2D p1 = Points[ VertexData.CurrentVertex ] ;
   const double length = sqrt( ( p0.x - p1.x ) * ( p0.x - p1.x ) +
-                            ( p0.y - p1.y ) * ( p0.y - p1.y ) ) ;
+                              ( p0.y - p1.y ) * ( p0.y - p1.y ) ) ;
   uint64_t Number = FLT_EPSILON + length / VertexData.MeshWidth ;
   Number = Number > 1 ? Number : 2 ;
   VertexData.DOFIndexCounter += 2 * Number ;
@@ -821,10 +806,11 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
   if ( width > VertexData.MaximalWidth )  VertexData.MaximalWidth = width ;
   P0.interface = false ;
   P0.match = 0 ;
+  P0.epsilon = VertexData.epsilon ;
+  P0.epsilon_m = VertexData.epsilon ;
   P0.panelsize = width ;
   P0.segment = VertexData.CurrentSegment ;
-  P0.normal_x = nx ;
-  P0.normal_y = ny ;
+  P0.normal = { nx, ny } ;
   P0.material = VertexData.CurrentMaterial ;
   P0.domain = VertexData.CurrentDomain ;
   P0.boundary = VertexData.CurrentBoundary ;
@@ -833,11 +819,10 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
     for ( uint64_t j = 0 ; j < Number ; j ++ )
     {
       P0.index = VertexData.CurrentDOFIndex ;
-      P0.x = x0 ;
-      P0.y = y0 ;
+      P0.midpoint = { x0, y0 } ;
       int state = VertexData.f0 -> Evaluate( P0 ) ;
       if ( state )  return state ;
-      Mesh.Panel.push_back( P0 ) ;  
+      Mesh.AddPanel( P0 ) ;
       x0 += dx ;
       y0 += dy ;
       VertexData.CurrentDOFIndex += 2 ;
@@ -852,9 +837,8 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
     for ( uint64_t j = 0 ; j < Number ; j ++ )
     {
       P0.index = VertexData.CurrentDOFIndex ;
-      P0.x = x0 ;
-      P0.y = y0 ;
-      Mesh.Panel.push_back( P0 ) ;  
+      P0.midpoint = { x0, y0 } ;
+      Mesh.AddPanel( P0 ) ;
       x0 += dx ;
       y0 += dy ;
       VertexData.CurrentDOFIndex += 2 ;

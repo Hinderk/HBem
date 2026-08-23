@@ -38,11 +38,20 @@
 #define HBEM_BOUNDARY_CONDITIONS_UNMET 1330
 #define HBEM_BOUNDARY_NOT_CLOSED 1340
 #define HBEM_DISCONNECTED_SEGMENTS 1350
+#define HBEM_MATRIX_RESIZING_FAILED 1360
+#define HBEM_UNDEFINED_MATRIX 1370
+#define HBEM_MATRIX_VECTOR_MISMATCH 1380
+#define HBEM_COLLOCATION_MATRIX_BROKEN 1390
+#define HBEM_INSUFFICIENT_AREADATA 1400
+#define HBEM_UNKNOWN_OUTPUT_FORMAT 1410
+#define HBEM_NO_DOMAIN_DATA_READ 1420
+
 
 #define HBEM_MAX_FILE_PATH_LENGTH  1024   // Size of buffer employed to
                                           // manipulate full file names
 
 #define HBEM_DOMAIN_FILE_FORMAT   "1.0"
+#define HBEM_AREA_FILE_FORMAT     "1.0"
 
 #define HBEM_NO_ERROR_MESSAGES        2   // These numbers are used to
 #define HBEM_NO_WARNING_MESSAGES      4   // control the verbosity of
@@ -51,7 +60,7 @@
 #define HBEM_DEFAULT_VERBOSITY        8   // Default verbosity level
 
 #define HBEM_SIZE_THRESHOLD ( 1 << 16 )   // Limit the total number of
-					  // degrees of freedom
+                                          // degrees of freedom
 
 #define HBEM_SHELL_ENV_SEARCHPATH   "HBEM_FILE_SEARCH_PATH"
 #define HBEM_PLUGIN_DIRECTORY       "HBEM_PLUGIN_SEARCH_PATH"

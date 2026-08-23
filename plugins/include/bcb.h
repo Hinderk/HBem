@@ -27,7 +27,7 @@ class BC_B : public BEM_Function {
 
     int Evaluate( PointData &MeshPoint ) ;
 
-    const char* QueryType( void ) const { return Type ; } 
+    const char* QueryType( void ) const { return Type ; }
     PluginVersion_t Revision( void ) const { return Version ; }
 
     static constexpr PluginVersion_t Version = { 0, 1 } ;

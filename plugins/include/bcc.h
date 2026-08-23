@@ -1,31 +1,29 @@
 
-#ifndef __HMB_BCA_H
-#define __HMB_BCA_H
+#ifndef __HMB_BCC_H
+#define __HMB_BCC_H
 
 #include "bemfunction.h"
 #include "defines.h"
-#include "export_BCA.h"
-
-
+#include "export_BCC.h"
 
 
 
 extern "C" {
 
-  BCA_EXPORT int32_t HBEM_Init( const Service_t * ) ;
-  BCA_EXPORT int32_t HBEM_Exit( void ) ;
+  BCC_EXPORT int32_t HBEM_Init( const Service_t * ) ;
+  BCC_EXPORT int32_t HBEM_Exit( void ) ;
 
 } ;
 
 
 
 
-class BC_A : public BEM_Function {
+class BC_C : public BEM_Function {
 
   public:
 
-    BC_A( void ) {}
-   ~BC_A( void ) {}
+    BC_C( void ) {}
+   ~BC_C( void ) {}
 
     int Evaluate( PointData &MeshPoint ) ;
 
@@ -33,9 +31,9 @@ class BC_A : public BEM_Function {
     PluginVersion_t Revision( void ) const { return Version ; }
 
     static constexpr PluginVersion_t Version = { 0, 1 } ;
-    static constexpr const char *Type = "BC_A" ;
+    static constexpr const char *Type = "BC_C" ;
 
 } ;
 
 
-#endif     // __HMB_BCA_H
+#endif     // __HMB_BCC_H

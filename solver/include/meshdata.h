@@ -2,31 +2,43 @@
 #ifndef __HBEM_MESHDATA_H
 #define __HBEM_MESHDATA_H
 
-#include "pointdata.h"
 #include <map>
 #include <vector>
 
-class DomainData ;
+#include "pointdata.h"
+#include "areadata.h"
+#include "matrix.h"
+#include "vector.h"
 
 
 
 class MeshData {
-
-  friend class DomainData ;
 
   public:
 
     MeshData( void ) ;
    ~MeshData( void ) {}
 
+   void Start( uint32_t Domain, uint64_t DOFIndex ) ;
+   void Stop( uint32_t Domain, uint64_t DOFIndex ) ;
+   void Clear( void ) ;
+   void SetName( std::string &NewName )  { Name = NewName ; }
+   bool MatchPanel( void ) ;
+   void AddPanel( const PointData &NewPanel ) ;
+   int Assemble( HBEM::Matrix &A, HBEM::Vector &f ) ;
+   int ComputeAreaData( AreaData &A0, const HBEM::Vector &x ) ;
+
   private:
 
-    std::vector<PointData>  Panel ;
+    std::string                     Name ;
 
-    std::map<int,double>    epsilon ;
+    double                          xa, xo ;
+    double                          ya, yo ;
 
-    std::map<int,int>       DomainStart ;
-    std::map<int,int>       DomainEnd ;
+    std::vector< PointData >        Panel ;
+
+    std::map< uint32_t, uint64_t >  DomainStart ;
+    std::map< uint32_t, uint64_t >  DomainEnd ;
 
 } ;
 

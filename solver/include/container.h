@@ -1,8 +1,10 @@
 
-#ifndef __HBEM_CONTAINER 
-#define __HBEM_CONTAINER 
+#ifndef __HBEM_CONTAINER
+#define __HBEM_CONTAINER
 
 #include <cstdint>
+#include <map>
+#include <list>
 
 class BEM_Function ;
 
@@ -65,7 +67,9 @@ namespace HBEM {
     double        MaximalWidth ;
 
     BEM_Function *f0 ;
-    RobinBC       BoundaryCondition ; 
+    RobinBC       BoundaryCondition ;
+
+    double        epsilon ;
 
     uint64_t      CurrentDOFIndex ;
     uint64_t      DOFIndexCounter ;

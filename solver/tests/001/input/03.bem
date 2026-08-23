@@ -1,0 +1,47 @@
+.type:
+hbem-domain-data
+.format:
+1.0
+.name:
+Capacitor 01
+.created:
+08/14/26 -- 05:42:11
+.points:
+1  -2.0  -2.0
+2  +2.0  -2.0
+3  +2.0  +2.0
+4  -2.0  +2.0
+5  -2.5  -2.5
+6  +2.5  -2.5
+7  +2.5  +2.5
+8  -2.5  +2.5
+.segment:
+1              # Don't use 0 here!
+.material:
+6
+.vertices:
+1 2 3 4
+.segment:
+2
+.material:
+8
+.vertices:
+5 6 7 8
+.domain:
+1
+.constant:
+1.2
+.boundary:
+1
+.evaluate:
+LOADME
+.segments:
+-1
+.boundary:
+2
+.segments:
++2
+.materials:
+6 1 0 15.0     # Dirichlet
+8 0 1 0.0      # Neumann
+.end

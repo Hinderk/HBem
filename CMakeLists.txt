@@ -7,6 +7,10 @@ PROJECT( HBem C CXX )
 
 FIND_PACKAGE( "Threads" )
 
+# Locate any third party libraries required to build the solver:
+
+FIND_PACKAGE( "Umfpack" )
+
 # The following switch turns the automated unit tests on or off. To
 # disable the compilation of test code simply remove the line below.
 

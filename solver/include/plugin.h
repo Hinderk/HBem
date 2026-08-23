@@ -34,7 +34,7 @@ extern "C" {
     {
       return Major < pv.Major ? true  :
              Major > pv.Major ? false :
-	     Minor < pv.Minor ;
+             Minor < pv.Minor ;
     }
 
     uint16_t Major ;

@@ -28,6 +28,7 @@ class DomainData {
     int Write( const char *File ) const ;
     int Read( const char *File, const char *Path = NULL ) ;
     int SetLog( FILE *LogFile ) ;
+    int ChangeLogLevel( int NewLevel ) ;
     int Start( void ) ;
     int Stop( void ) ;
     int Search( const char *Path = NULL ) ;
@@ -38,9 +39,7 @@ class DomainData {
     int Update( const char *Name, const Plugin_t *Data ) ;
     int CreateMesh( MeshData &Mesh, double MeshWidth ) ;
 
-    int ChangeLogLevel( int NewLevel ) ;
-
-  public:
+  private:
 
     int Create( BEM_Function *&f, const char *Type ) ;
     int Discard( const BEM_Function *f ) ;
@@ -67,6 +66,5 @@ class DomainData {
     PluginVersion_t                           MaxVersion ;
 
 } ;
-
 
 #endif    // __HBEM_DOMAINDATA_H

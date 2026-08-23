@@ -28,7 +28,7 @@ int BC_A::Evaluate( PointData &p )
   {
     p.c0 = 1 ;
     p.c1 = 0 ;
-    p.cr = 10.0 + 5.0 * p.x * p.y ;
+    p.cr = 10.0 + 5.0 * p.midpoint.x * p.midpoint.y ;
   }
   return 0 ;
-}  
+}

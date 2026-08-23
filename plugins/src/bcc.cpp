@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cstdint>
 
-#include "bcb.h"
+#include "bcc.h"
 #include "setup.h"
 
 
@@ -16,19 +16,19 @@ extern "C" int32_t HBEM_Exit( void )
 
 extern "C" int32_t HBEM_Init( const Service_t *Service )
 {
-  return Setup<BC_B>::Init( Service ) ;
+  return Setup<BC_C>::Init( Service ) ;
 }
 
 
 
-int BC_B::Evaluate( PointData &p )
+int BC_C::Evaluate( PointData &p )
 {
   p.valid_bc = p.material < 10 ;
   if ( p.valid_bc )
   {
     p.c0 = 1 ;
     p.c1 = 0 ;
-    p.cr = 10.0 + 5.0 * p.midpoint.x * p.midpoint.y ;
+    p.cr = p.midpoint.x * p.midpoint.x - p.midpoint.y * p.midpoint.y ;
   }
   return 0 ;
 }
