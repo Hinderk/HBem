@@ -33,6 +33,21 @@ static double DL( const Point2D q, const PointData &p )
 
 
 
+static double DLT1( const Point2D q, const PointData &p )
+{
+  constexpr double D0 = 0.5 / M_PI ;
+  const double dx = q.x - p.midpoint.x ;
+  const double dy = q.y - p.midpoint.y ;
+  const double delta = dx * p.normal.x + dy * p.normal.y ;
+  const double s0 = - dx * p.normal.y + dy * p.normal.x ;
+  const double h = 0.5 * p.panelsize ;
+  const double a1 = atan2( delta, s0 + h ) ;
+  const double a2 = atan2( delta, s0 - h ) ;
+  return D0 * ( a2 - a1 ) ;
+}
+
+
+
 static double DL0( const Point2D q, const PointData &p )
 {
   constexpr double D0 = 0.5 / M_PI ;
@@ -90,17 +105,18 @@ int main( int argc, const char *argv[] )
   PD.normal = { -1, 0 } ;
   PD.panelsize = 0.2 ;
   Point2D P[] = { { 2.1, -3.9 }, { 2.1, -6 }, { 2.1, -2 }, { 2.1, -4.1 },
-                  { 2.0, -4 }, { 2.2, -4 }, { 5, -4 }, { 1.5, -4 },
-                  { 1.999, -4 }, { 2.0001, -4 } } ;
+                  { 2.0, -4 }, {2-1e-8, -4}, { 2.2, -4 }, { 9, -4 },
+                  { -5, -4 }, { 1.9999, -4 }, { 2.0001, -4 } } ;
   for ( const auto &Q : P )
   {
     std::cout << "# DL Point data:  {" << Q.x << "," << Q.y << "}\n" ;
     std::cout << "# DL Result: " << DL( Q, PD ) << "\n" ;
+    std::cout << "# DL T1 Result: " << DLT1( Q, PD ) << "\n" ;
     std::cout << "# DL Approximation: " << DL0( Q, PD ) << "\n\n" ;
-    std::cout << "# SL Point data:  {" << Q.x << "," << Q.y << "}\n" ;
-    std::cout << "# SL Result: " << SL( Q, PD ) << "\n" ;
-    std::cout << "# SL(0) Approximation: " << SL0( Q, PD ) ;
-    std::cout << "  --  " << SL00( PD.panelsize ) << "\n\n" ;
+//    std::cout << "# SL Point data:  {" << Q.x << "," << Q.y << "}\n" ;
+//    std::cout << "# SL Result: " << SL( Q, PD ) << "\n" ;
+//    std::cout << "# SL(0) Approximation: " << SL0( Q, PD ) ;
+//    std::cout << "  --  " << SL00( PD.panelsize ) << "\n\n" ;
   }
   return 0 ;
 }

@@ -2,9 +2,11 @@
 #include <algorithm>
 #include <fstream>
 #include <math.h>
+#include <float.h>
 
 #include "defines.h"
 #include "vector.h"
+#include "edgedata.h"
 #include "areadata.h"
 #include "meshdata.h"
 
@@ -40,12 +42,6 @@ static double DL( const Point2D q, const PointData &p )
   const double delta = dx * p.normal.x + dy * p.normal.y ;
   const double s0 = - dx * p.normal.y + dy * p.normal.x ;
   const double h = 0.5 * p.panelsize ;
-  if ( fabs(s0) < h )
-  {
-    const double a1 = atan2( delta, s0 + h ) ;
-    const double a2 = atan2( delta, h - s0 ) ;
-    return ( delta < 0 ? -.5 : .5 ) - D0 * ( a1 + a2 ) ;
-  }
   const double a1 = atan2( delta, s0 + h ) ;
   const double a2 = atan2( delta, s0 - h ) ;
   return D0 * ( a2 - a1 ) ;
@@ -70,32 +66,21 @@ MeshData::MeshData() :
   ya( + DBL_MAX ) ,
   yo( - DBL_MAX ) ,
   Panel() ,
-  DomainStart() ,
-  DomainEnd() {}
+  Edge() ,
+  Domains( 0 ) ,
+  DomainId( NULL ) {}
 
 
 
 void MeshData::Clear( void )
 {
-  DomainStart.clear() ;
-  DomainEnd.clear() ;
   Panel.clear() ;
+  Edge.clear() ;
   xa = ya = DBL_MAX ;
   xo = yo = - DBL_MAX ;
-}
-
-
-
-void MeshData::Start( uint32_t Domain, uint64_t DOFIndex )
-{
-  DomainStart[ Domain ] = DOFIndex ;
-}
-
-
-
-void MeshData::Stop( uint32_t Domain, uint64_t DOFIndex )
-{
-  DomainEnd[ Domain ] = DOFIndex ;
+  if ( Domains > 0 )  delete[] DomainId ;
+  Domains = 0 ;
+  DomainId = NULL ;
 }
 
 
@@ -111,9 +96,16 @@ void MeshData::AddPanel( const PointData &NewPanel )
 
 
 
+void MeshData::AddEdge( const EdgeData &NewEdge )
+{
+  Edge.push_back( NewEdge ) ;
+}
+
+
+
 bool MeshData::MatchPanel( void )
 {
-  sort( Panel.begin(), Panel.end() ) ;
+  sort( Panel.begin(), Panel.end(), SegmentsOrdered ) ;
   bool BCok = true ;
   PointData *p0 = NULL ;
   for ( auto &p : Panel )
@@ -122,7 +114,7 @@ bool MeshData::MatchPanel( void )
     p0 = &p ;
     if ( pold )
     {
-      if ( *pold < p )  continue ;
+      if ( SegmentsOrdered( *pold, p ) )  continue ;
       p.interface = true ;
       p.match = pold -> index ;
       pold -> interface = true ;
@@ -132,12 +124,29 @@ bool MeshData::MatchPanel( void )
     }
     BCok &= p.interface || p.valid_bc ;
   }
+  sort( Panel.begin(), Panel.end() ) ;
   return BCok ;
 }
 
 
+/*
+void MeshData::InitDomains( const std::vector< int > &Mapping )
+{
+  if ( Domains > 0 )  delete[] DomainId ;
+  Domains = Mapping.size() ;
+  DomainId = NULL ;
+  if ( Domains > 0 )
+  {
+    DomainId = new uint32_t[ Domains ] ;
+    auto Hold( Mapping ) ;
+    sort( Hold.begin(), Hold.end() ) ;
+    for ( int n = 0 ; n < Domains ; n++ )  DomainId[ n ] = Hold[ n ] ;
+  }
+}  */
 
-int MeshData::Assemble( HBEM::Matrix &A, HBEM::Vector &f )
+
+
+int MeshData::Assemble( Matrix &A, Vector &f ) const
 {
   const uint64_t ntotal = 2 * Panel.size() ;
   A.Resize( ntotal ) ;
@@ -177,7 +186,59 @@ int MeshData::Assemble( HBEM::Matrix &A, HBEM::Vector &f )
 
 
 
-int MeshData::ComputeAreaData( AreaData &A0, const HBEM::Vector &x )
+int MeshData::Query( const Point2D &p0, Position *loc ) const
+{
+  int CurrentDomain = 0 ;
+  int Winding = 0 ;
+  int i = 0 ;
+  for ( const auto &e : Edge )
+  {
+    if ( CurrentDomain < e.domain )
+    {
+      if ( Winding && i < 1 )  return CurrentDomain ;
+      Winding = 0 ;
+      CurrentDomain = e.domain ;
+    }
+    if ( p0.y < e.start.y + FLT_EPSILON )
+    {
+      if ( e.end.y < p0.y + FLT_EPSILON )
+      {
+        const int pos = e.Left( p0 ) ;
+        if ( pos < 0 )
+          Winding -- ;
+        else if ( pos == 0 )
+        {
+          const double dx = p0.x - e.start.x ;
+          const double dy = p0.y - e.start.y ;
+          loc[ i ] = e ;
+          loc[ i ++ ].arclen += dy * e.normal.x - dx * e.normal.y ;
+        }
+      }
+      else if ( p0.dist( e.start ) < FLT_EPSILON )  // TODO: Are there
+      {                                             // other edge cases
+        loc[ i ++ ] = e ;                           // to consider?
+      }
+    }
+    else if ( p0.y < e.end.y + FLT_EPSILON )
+    {
+      const int pos = e.Left( p0 ) ;
+      if ( pos > 0 )
+        Winding ++ ;
+      else if ( pos == 0 )
+      {
+        const double dx = p0.x - e.start.x ;
+        const double dy = p0.y - e.start.y ;
+        loc[ i ] = e ;
+        loc[ i ++ ].arclen += dy * e.normal.x - dx * e.normal.y ;
+      }
+    }
+  }
+  return i ? - i : Winding ? CurrentDomain : 0 ;
+}
+
+
+
+int MeshData::ComputeAreaData( AreaData &A0, const Vector &x ) const
 {
   A0.name = Name ;
   if ( A0.dx < FLT_EPSILON || A0.dy < FLT_EPSILON )
@@ -188,20 +249,15 @@ int MeshData::ComputeAreaData( AreaData &A0, const HBEM::Vector &x )
   A0.rows = 2 + ( A0.yo - A0.ya ) / A0.dy ;
   A0.dx = ( A0.xo - A0.xa ) / ( A0.columns - 1 ) ;
   A0.dy = ( A0.yo - A0.ya ) / ( A0.rows - 1 ) ;
-  A0.layers = DomainEnd.size() ;
   if ( A0.domain )
   {
     delete[] A0.domain ;
     delete[] A0.potential ;
-    delete[] A0.DomainId ;
   }
   const uint64_t LayerSize = A0.rows * A0.columns ;
-  A0.DomainId = new uint32_t[ A0.layers ] ;
   A0.domain = new uint32_t[ LayerSize ] ;
-  A0.potential = new double[ A0.layers * LayerSize ] ;
-  uint32_t n = 0 ;
-  for ( const auto &I : DomainEnd )  A0.DomainId[ n ++ ] = I.first ;
-  qsort( A0.DomainId, n, sizeof(uint32_t), Compare_uint32_t ) ;
+  A0.potential = new double[ LayerSize ] ;
+  Position Location[ 1024 ] ;   
   double xc = A0.xa ;
   for ( uint32_t k = 0 ; k < A0.columns ; k ++ )
   {
@@ -209,16 +265,91 @@ int MeshData::ComputeAreaData( AreaData &A0, const HBEM::Vector &x )
     for ( uint32_t l = 0 ; l < A0.rows ; l ++ )
     {
       const Point2D p0 = { xc, yc } ;
-      for ( const auto &Q : Panel )
+      int i = Query( p0, Location ) ;
+      if ( i > 0 )
       {
-        for ( n = 0 ; A0.DomainId[n] < Q.domain ; n ++ ) ;
-        double &a = A0.potential[ n * LayerSize + k * A0.rows + l ] ;
-        a -= DL( p0, Q ) * x( Q.index ) ;
-        a += SL( p0, Q ) * x( Q.index + 1 ) ;
+        A0.domain[ k * A0.rows + l ] = i ;
+        double &a = A0.potential[ k * A0.rows + l ] ;
+        a = 0.0 ;
+        for ( const auto &Q : Panel )
+        {
+          if ( Q.domain == i )
+          {
+            a -= DL( p0, Q ) * x( Q.index ) ;
+            a += SL( p0, Q ) * x( Q.index + 1 ) ;
+          }
+        }
+      }
+      else if ( i < 0 )
+      {
+        double &a = A0.potential[ k * A0.rows + l ] ;
+        a = 0 ;
+        int n = -i ;
+        while ( n -- )
+        {
+          const double so = Location[ n ].arclen ;
+          int32_t il = LeftIndex( Location[ n ] ) ;
+          if ( il < 0 )
+            il = 0 ;
+          else if ( FirstOffEdge( il ) )
+            il ++ ;
+          else if ( LastOnEdge( il ) )
+            il -- ;
+          const int32_t ir = il + 1 ;
+          const double sl = Panel[ il ].arclen ;
+          const double sr = Panel[ ir ].arclen ;
+          const double xl = x( Panel[ il ].index ) ;
+          const double xr = x( Panel[ ir ].index ) ;
+          a += ( ( so - sl ) * xr + ( sr - so ) * xl ) / ( sr - sl ) ;
+        }
+        a /= - i ;
+      }
+      else
+      {
+        A0.domain[ k * A0.rows + l ] = 0 ;
+        A0.potential[ k * A0.rows + l ] = NAN ;
       }
       yc += A0.dy ;
     }
     xc += A0.dx ;
   }
   return 0 ;
+}
+
+
+
+int32_t MeshData::LeftIndex( const Position &pos ) const
+{
+  if ( Panel.empty() || pos < Panel[ 0 ] )  return -1 ;
+  int32_t ka = 0 ;
+  int32_t ko = Panel.size() - 1 ;
+  while ( ka < ko )
+  {
+    const int32_t kn = ( 1 + ka + ko ) >> 1 ;
+    if ( pos < Panel[ kn ] )
+      ko = kn - 1 ;
+    else
+      ka = kn ;
+  }
+  return ka ;
+}
+
+
+
+bool MeshData::FirstOffEdge( int32_t index ) const
+{
+  if ( Panel.size() < index + 2 )  return false ;
+  const PointData &P0 = Panel[ index ] ;
+  const PointData &PN = Panel[ index + 1 ] ;
+  return P0.domain < PN.domain ? true : P0.boundary < PN.boundary ;
+}
+
+
+
+bool MeshData::LastOnEdge( int32_t index ) const
+{
+  if ( Panel.size() < index + 2 )  return true ;
+  const PointData &P0 = Panel[ index ] ;
+  const PointData &PN = Panel[ index + 1 ] ;
+  return P0.domain < PN.domain ? true : P0.boundary < PN.boundary ;
 }

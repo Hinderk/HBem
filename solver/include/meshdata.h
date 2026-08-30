@@ -2,13 +2,15 @@
 #ifndef __HBEM_MESHDATA_H
 #define __HBEM_MESHDATA_H
 
-#include <map>
 #include <vector>
 
 #include "pointdata.h"
 #include "areadata.h"
+#include "edgedata.h"
 #include "matrix.h"
 #include "vector.h"
+#include "container.h"
+
 
 
 
@@ -19,14 +21,17 @@ class MeshData {
     MeshData( void ) ;
    ~MeshData( void ) {}
 
-   void Start( uint32_t Domain, uint64_t DOFIndex ) ;
-   void Stop( uint32_t Domain, uint64_t DOFIndex ) ;
    void Clear( void ) ;
    void SetName( std::string &NewName )  { Name = NewName ; }
    bool MatchPanel( void ) ;
+   void AddEdge( const EdgeData &NewEdge ) ;
    void AddPanel( const PointData &NewPanel ) ;
-   int Assemble( HBEM::Matrix &A, HBEM::Vector &f ) ;
-   int ComputeAreaData( AreaData &A0, const HBEM::Vector &x ) ;
+   int Assemble( HBEM::Matrix &A, HBEM::Vector &f ) const ;
+   int ComputeAreaData( AreaData &A0, const HBEM::Vector &x ) const ;
+   int Query( const HBEM::Point2D &p0, HBEM::Position *loc ) const ;
+   int32_t LeftIndex( const HBEM::Position &loc ) const ;
+   bool FirstOffEdge( int32_t index ) const ;
+   bool LastOnEdge( int32_t index ) const ;
 
   private:
 
@@ -36,9 +41,10 @@ class MeshData {
     double                          ya, yo ;
 
     std::vector< PointData >        Panel ;
+    std::vector< EdgeData >         Edge ;
 
-    std::map< uint32_t, uint64_t >  DomainStart ;
-    std::map< uint32_t, uint64_t >  DomainEnd ;
+    uint32_t                        Domains ;
+    uint32_t                       *DomainId ;
 
 } ;
 

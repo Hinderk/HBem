@@ -1,0 +1,96 @@
+.type:
+hbem-domain-data
+.format:
+1.0
+.name:
+Capacitor 01
+.created:
+08/19/26 -- 20:37:11
+.points:
+1  -2.0  -2.0
+2  +2.0  -2.0
+3  +2.0  +2.0
+4  -2.0  +2.0
+5  -4.0  -4.0
+6  +4.0  -4.0
+7  +4.0  +4.0
+8  -4.0  +4.0
+9  +3.0  +2.0
+10 +3.0  +3.0
+11 +2.0  +3.0
+12 -3.0  -2.0
+13 -3.0  -3.0
+14 -2.0  -3.0
+.segment:
+1
+.material:
+4
+.vertices:
+1 2 3 4 1
+.segment:
+2
+.material:
+8
+.vertices:
+5 6 7 8 5
+.segment:
+3
+.material:
+2
+.vertices:
+3 9 10 11 3
+.segment:
+4
+.material:
+2
+.vertices:
+1 12 13 14 1
+.domain:
+1
+.constant:
+1.5
+.boundary:
+1
+.evaluate:
+BC_A
+.segments:
+-1
+.boundary:
+2
+.evaluate:
+BC_B
+.segments:
++2
+.boundary:
+3
+.evaluate:
+BC_C
+.segments:
+-3
+.boundary:
+4
+.evaluate:
+BC_C
+.segments:
+-4
+.domain:
+2
+.constant:
+1.0
+.boundary:
+1
+.evaluate:
+BC_C
+.segments:
+3
+.domain:
+3
+.constant:
+1.0
+.boundary:
+1
+.evaluate:
+BC_C
+.segments:
+4
+.end

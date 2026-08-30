@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <math.h>
+#include <float.h>
 
 #include "defines.h"
 #include "pointdata.h"
@@ -35,6 +36,7 @@ DomainData::DomainData( void ) :
   Points() ,
   Segments() ,
   Patches() ,
+  DomainId() ,
   Module() ,
   Registry()
 {
@@ -290,6 +292,7 @@ int DomainData::Read( const char *File, const char *Path )
         if ( n < 1 || DomainIndex < 1 )  break ;
         state = HBEM_DUPLICATE_DOMAIN_DATA ;
         if ( Patches.count( DomainIndex ) > 0 )  break ;
+        DomainId.push_back( DomainIndex ) ;
         Patch.Boundaries.clear() ;
       }
       else if ( step == 16 && strcmp( buffer, ".constant:" ) )  break ;
@@ -640,13 +643,13 @@ int DomainData::CreateMesh( MeshData &Mesh, double MeshWidth )
     VertexData.CurrentDOFIndex = 0 ;
     VertexData.f0 = NULL ;
     VertexData.State = 0 ;
-    int state ;
+    Mesh.Clear() ;
     Mesh.SetName( Name ) ;
+    int state ;
     for ( const auto &P : Patches )
     {
       msg << "Start processing patch:  " << P.first ;
       LogInfo( msg, 1 ) ;
-      Mesh.Start( P.first, VertexData.CurrentDOFIndex ) ;
       VertexData.CurrentDomain = P.first ;
       VertexData.epsilon = P.second.epsilon ;
       for ( const auto &B : P.second.Boundaries )
@@ -743,7 +746,6 @@ int DomainData::CreateMesh( MeshData &Mesh, double MeshWidth )
         }
         LogInfo( "Done tracing boundary.", 2 ) ;
       }
-      Mesh.Stop( P.first, VertexData.CurrentDOFIndex ) ;
       LogInfo( "Done processing patch.", 1 ) ;
     }
     if ( Patches.size() > 0 )
@@ -768,6 +770,7 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
 {
   std::stringstream msg ;
   PointData P0 ;
+  EdgeData E0 ;
   bool bcvalid = fabs( VertexData.BoundaryCondition.c0 ) > 1e-4 ||
                  fabs( VertexData.BoundaryCondition.c1 ) > 1e-4 ;
   if ( VertexData.StartNewBoundary )
@@ -775,6 +778,7 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
     VertexData.StartNewBoundary = false ;
     VertexData.FirstVertex = VertexData.CurrentVertex ;
     VertexData.LastVertex = VertexData.FirstVertex ;
+    VertexData.ArcLength = 0.0 ;
   }
   if ( VertexData.StartNewSegment )
   {
@@ -802,8 +806,16 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
   const double nx = ( p1.y - p0.y ) / length ;
   const double ny = ( p0.x - p1.x ) / length ;
   const double width = length / Number ;
+  double ArcLength = VertexData.ArcLength + 0.5 * width ;
   if ( width < VertexData.MinimalWidth )  VertexData.MinimalWidth = width ;
   if ( width > VertexData.MaximalWidth )  VertexData.MaximalWidth = width ;
+  E0.domain = VertexData.CurrentDomain ;
+  E0.boundary = VertexData.CurrentBoundary ;
+  E0.arclen = VertexData.ArcLength ;
+  E0.start = p0 ;
+  E0.end = p1 ;
+  E0.normal = { nx, ny } ;
+  Mesh.AddEdge( E0 ) ;
   P0.interface = false ;
   P0.match = 0 ;
   P0.epsilon = VertexData.epsilon ;
@@ -820,11 +832,13 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
     {
       P0.index = VertexData.CurrentDOFIndex ;
       P0.midpoint = { x0, y0 } ;
+      P0.arclen = ArcLength ;
       int state = VertexData.f0 -> Evaluate( P0 ) ;
       if ( state )  return state ;
       Mesh.AddPanel( P0 ) ;
       x0 += dx ;
       y0 += dy ;
+      ArcLength += width ;
       VertexData.CurrentDOFIndex += 2 ;
     }
   }
@@ -838,11 +852,14 @@ int DomainData::TraceBoundary( MeshData &Mesh, Container &VertexData )
     {
       P0.index = VertexData.CurrentDOFIndex ;
       P0.midpoint = { x0, y0 } ;
+      P0.arclen = ArcLength ;
       Mesh.AddPanel( P0 ) ;
       x0 += dx ;
       y0 += dy ;
+      ArcLength += width ;
       VertexData.CurrentDOFIndex += 2 ;
     }
   }
+  VertexData.ArcLength += length ;
   return 0 ;
 }

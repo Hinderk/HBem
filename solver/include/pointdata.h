@@ -3,20 +3,11 @@
 #define __HBEM_POINTDATA_H
 
 #include "container.h"
-#include <float.h>
 
 
-struct PointData {
 
 
-  bool operator<( const PointData &p )
-  {
-    return segment < p.segment   ? true  :
-           segment > p.segment   ? false :
-           midpoint.x + FLT_EPSILON < p.midpoint.x ? true  :
-           midpoint.x - FLT_EPSILON > p.midpoint.x ? false :
-           midpoint.y + FLT_EPSILON < p.midpoint.y ;
-  }
+struct PointData : public HBEM::Position {
 
   bool           interface ;
   bool           valid_bc ;
@@ -26,8 +17,6 @@ struct PointData {
 
   int32_t        segment ;
 
-  int32_t        domain ;
-  int32_t        boundary ;
   int32_t        material ;
 
   double         epsilon ;
@@ -41,5 +30,9 @@ struct PointData {
   double         c0, c1, cr ;
 
 } ;
+
+
+bool SegmentsOrdered( const PointData &p, const PointData &q ) ;
+
 
 #endif     // __HBEM_POINTDATA_H

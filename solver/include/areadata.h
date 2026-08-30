@@ -38,8 +38,6 @@ class AreaData {
 
     std::string  name ;
 
-    uint32_t    *DomainId ;
-    uint32_t     layers ;
     uint32_t     rows ;
     uint32_t     columns ;
 

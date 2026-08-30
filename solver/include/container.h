@@ -3,8 +3,10 @@
 #define __HBEM_CONTAINER
 
 #include <cstdint>
+#include <cmath>
 #include <map>
 #include <list>
+#include <string>
 
 class BEM_Function ;
 
@@ -14,6 +16,11 @@ namespace HBEM {
 
 
   struct Point2D {
+
+    double dist( const Point2D &q ) const
+    {
+      return fabs( x - q.x ) + fabs( y - q.y ) ;
+    }
 
     double x ;
     double y ;
@@ -55,6 +62,25 @@ namespace HBEM {
   } ;
 
 
+  struct Position {
+
+    bool operator<( const Position &pos ) const
+    {
+      return domain < pos.domain       ? true  :
+             domain > pos.domain       ? false :
+             boundary < pos.boundary   ? true  :
+             boundary > pos.boundary   ? false :
+             arclen < pos.arclen ;
+    }
+
+    int32_t  domain ;
+    int32_t  boundary ;
+
+    double   arclen ;
+
+  } ;
+
+
   struct Container {
 
     bool          StartNewBoundary ;
@@ -65,6 +91,8 @@ namespace HBEM {
     double        MeshWidth ;
     double        MinimalWidth ;
     double        MaximalWidth ;
+
+    double        ArcLength ;
 
     BEM_Function *f0 ;
     RobinBC       BoundaryCondition ;

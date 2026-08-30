@@ -1,7 +1,7 @@
 
 SET( SRCFILES "domaindata.cpp" "openfile.cpp" "dlfcn.cpp"
               "bemplugin.cpp" "vector.cpp" "areadata.cpp"
-              "meshdata.cpp" "matrix.cpp" )
+              "meshdata.cpp" "matrix.cpp" "pointdata.cpp" )
 
 # Create the target for the build system ...
 

@@ -6,6 +6,7 @@
 #include <memory>
 #include <list>
 #include <map>
+#include <vector>
 #include <string>
 #include <sstream>
 
@@ -59,6 +60,7 @@ class DomainData {
     std::map< int, HBEM::Line2D >             Segments ;
 
     std::map< int, HBEM::Domain2D >           Patches ;
+    std::vector< int >                        DomainId ;
 
     std::list< std::shared_ptr<BEM_Plugin> >  Module ;
     std::map< std::string, Plugin_t >         Registry ;

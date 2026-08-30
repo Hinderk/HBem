@@ -12,8 +12,6 @@
 AreaData::AreaData( void ) :
 
   name() ,
-  DomainId( NULL ) ,
-  layers( 0 ) ,
   rows( 0 ) ,
   columns( 0 ) ,
   xa( 0.0 ) ,
@@ -30,8 +28,6 @@ AreaData::AreaData( void ) :
 AreaData::AreaData( double MeshWidth, double MeshHeight ) :
 
   name() ,
-  DomainId( NULL ) ,
-  layers( 0 ) ,
   rows( 0 ) ,
   columns( 0 ) ,
   xa( 0.0 ) ,
@@ -49,9 +45,8 @@ AreaData::~AreaData( void )
 {
   if ( domain )
   {
-    delete[] domain ;
     delete[] potential ;
-    delete[] DomainId ;
+    delete[] domain ;
   }
 }
 
@@ -94,24 +89,18 @@ int AreaData::WriteGnuplot( const char *File ) const
     fprintf( Out, "#.type:\n# hbem-area-data\n#.format:\n" ) ;
     fprintf( Out, "# %s\n#.name:", HBEM_AREA_FILE_FORMAT ) ;
     fprintf( Out, "\n# %s\n#", name.c_str() ) ;
-    uint64_t Layer = rows * columns ;
-    for ( uint32_t l = 0 ; l < layers ; l ++ )
+    double xval = xa ;
+    for ( uint32_t n = 0 ; n < columns ; n ++ )
     {
-      fprintf( Out, "\n# Layer: %i", DomainId[ l ] ) ;
-      double xval = xa ;
-      for ( uint32_t n = 0 ; n < columns ; n ++ )
+      double yval = ya ;
+      for ( uint32_t m = 0 ; m < rows ; m ++ )
       {
-        double yval = ya ;
-        for ( uint32_t m = 0 ; m < rows ; m ++ )
-        {
-          double zval = potential[ l * Layer + n * rows + m ] ;
-          fprintf( Out, "\n%+12.8f  %+12.8f ", xval, yval ) ;
-          fprintf( Out, "  %+16.12e", zval ) ;
-          yval += dy ;
-        }
-        xval += dx ;
-        fprintf( Out, "\n" ) ;
+        double zval = potential[ n * rows + m ] ;
+        fprintf( Out, "\n%+12.8f  %+12.8f ", xval, yval ) ;
+        fprintf( Out, "  %+16.12e", zval ) ;
+        yval += dy ;
       }
+      xval += dx ;
       fprintf( Out, "\n" ) ;
     }
     fprintf( Out, "#.end\n" ) ;
@@ -125,32 +114,24 @@ int AreaData::WriteGnuplot( const char *File ) const
 
 int AreaData::WriteVisit( const char *File ) const
 {
-  std::stringstream FileName ;
   uint64_t Layer = rows * columns ;
-  for ( uint32_t l = 0 ; l < layers ; l ++ )
+  FILE *Out = fopen( File, "w" ) ;
+  if ( Out )
   {
-    FileName.clear() ;
-    FileName << File ;
-    FileName << "-" << std::setw(4) << std::setfill('0') ;
-    FileName << DomainId[ l ] << ".dat" ;
-    FILE *Out = fopen( FileName.str().c_str(), "w" ) ;
-    if ( Out )
+    fprintf( Out, "x y potential\n" ) ;
+    double xval = xa ;
+    for ( uint32_t n = 0 ; n < columns ; n ++ )
     {
-      fprintf( Out, "x y potential\n" ) ;
-      double xval = xa ;
-      for ( uint32_t n = 0 ; n < columns ; n ++ )
+      double yval = ya ;
+      for ( uint32_t m = 0 ; m < rows ; m ++ )
       {
-        double yval = ya ;
-        for ( uint32_t m = 0 ; m < rows ; m ++ )
-        {
-          double zval = potential[ l * Layer + n * rows + m ] ;
-          fprintf( Out, "%f %f %f\n", xval, yval, zval ) ;
-          yval += dy ;
-        }
-        xval += dx ;
+        double zval = potential[ n * rows + m ] ;
+        fprintf( Out, "%f %f %f\n", xval, yval, zval ) ;
+        yval += dy ;
       }
-      fclose( Out ) ;
+      xval += dx ;
     }
+    fclose( Out ) ;
   }
   return HBEM_FAILED_TO_WRITE_FILE ;
 }
